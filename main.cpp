@@ -4,9 +4,6 @@
 #include <windows.h>
 #include <strsafe.h>
 
-#include <process.h>
-#include <errno.h>
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -46,7 +43,6 @@ void SetChildStyle(HWND sub) {
 void EmbedWindow(HWND sub, HWND dom) {
 	SetParent(sub, dom);
 	SetChildStyle(sub);
-	SetWindowPos(sub, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
 
 int wmain(int argc, WCHAR** argv) {
@@ -65,18 +61,33 @@ int wmain(int argc, WCHAR** argv) {
 	EmbedWindow(console, embed);
 	SetWindowPos(console, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 
-	std::vector<LPCWSTR> v(argv+5, argv+argc);
+	std::vector<std::wstring> v(argv+5, argv+argc);
 	v.insert(v.begin(), L"/c");
 	v.insert(v.begin(), cmdName);
-	v.push_back(NULL);
 
-	LPCWSTR* prgArgv = v.data(); 
-	_wexecv(cmdName, prgArgv);
+	std::wstring tmp;
+	for (const auto& p : v) tmp += p + L' ';
+	LPWSTR args = tmp.data();
 
-	// exec will take over our process. if it didn't, there's an error.
-	int e = errno;
-	std::wcerr << L"_wexecv returned error " << e << L'\n';
-	return e;
+	STARTUPINFO si { .cb = sizeof(si) };
+	PROCESS_INFORMATION pi = { 0 };
+
+	if (!CreateProcess(
+		cmdName, args,
+		NULL, NULL, false, 0, NULL, NULL,
+		&si, &pi
+	)) {
+		DWORD e = GetLastError();
+		std::wcerr << L"CreateProcess error: "
+			   << std::hex << e;
+		return e;
+	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	return 0;
 }
 
 
