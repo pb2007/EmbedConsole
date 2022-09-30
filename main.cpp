@@ -51,6 +51,7 @@ int wmain(int argc, WCHAR** argv) {
 	if (argc < 4) {
 		std::wcerr << L"usage: " << argv[0] 
 			   << " \"class name\" \"window title\" x y command\n";
+		Sleep(1000);
 		return 1;
 	}
 
@@ -80,10 +81,12 @@ int wmain(int argc, WCHAR** argv) {
 		DWORD e = GetLastError();
 		std::wcerr << L"CreateProcess error: "
 			   << std::hex << e;
+		Sleep(1000);
 		return e;
 	}
 
 	WaitForSingleObject(pi.hProcess, INFINITE);
+	Sleep(1000);
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
